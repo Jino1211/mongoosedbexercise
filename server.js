@@ -57,7 +57,7 @@ app.post("/api/exercise/add", async (req, res) => {
       username: saveExercise.username,
       description: saveExercise.description,
       duration: saveExercise.duration,
-      date: saveExercise.date,
+      date: formatDate(saveExercise.date),
       _id: saveExercise.userId,
     };
 
@@ -79,9 +79,56 @@ app.get("/api/exercise/users", (req, res) => {
     .catch((e) => res.status(500).json({ msg: "ERROR" }));
 });
 
-app.get("/api/exercise/log", (req, res) => {
-  res.status(200).json({ msg: "hello" });
+app.get("/api/exercise/log?:userId", async (req, res) => {
+  const id = req.query.userId;
+  try {
+    const user = await User.findById(id);
+
+    if (!user) return res.status(404).send("Unknown userId");
+
+    const { _id, username } = user;
+    const log = await Exercise.find({ userId: _id }).select(
+      "-__v -_id -userId -username"
+    );
+
+    const newLog = [];
+
+    log.forEach(({ description, duration, date }) => {
+      const updateExercise = {
+        description,
+        duration,
+        date: formatDate(date),
+      };
+      newLog.push(updateExercise);
+    });
+    const count = log.length;
+
+    const userLog = {
+      _id,
+      username,
+      count,
+      log: newLog,
+    };
+    return res.status(200).json(userLog);
+  } catch (e) {
+    if (e.name === "CastError") {
+      return res.status(400).json({ ERROR: "Cast Error" });
+    }
+    return res.status(500).json({ ERROR: "Server problem" });
+  }
 });
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const day = date.getDate();
+  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(
+    date
+  );
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(
+    date
+  );
+  return `${weekday} ${month} ${day} ${year}`;
+}
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Your app is listening on port " + listener.address().port);
