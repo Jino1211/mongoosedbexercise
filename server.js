@@ -18,9 +18,9 @@ app.post("/api/exercise/new-user", async (req, res) => {
   const { username } = req.body;
 
   try {
-    const findUser = await User.find({ username: username });
+    const existUser = await User.find({ username: username });
 
-    if (findUser.length !== 0) {
+    if (existUser.length !== 0) {
       return res.status(400).status("User already exist");
     }
 
@@ -36,10 +36,38 @@ app.post("/api/exercise/new-user", async (req, res) => {
   }
 });
 
-app.post("/api/exercise/add", (req, res) => {
-  const { userId, description, duration, date } = req.body;
+app.post("/api/exercise/add", async (req, res) => {
+  const { userId, description, duration } = req.body;
 
-  res.status(200).json({ msg: "hello" });
+  const date = req.body.date === "" ? undefined : new Date(req.body.date);
+
+  try {
+    const existUser = await User.findById(userId);
+    const exercise = new Exercise({
+      userId: existUser._id,
+      username: existUser.username,
+      description: description,
+      duration: duration,
+      date: date,
+    });
+
+    const saveExercise = await exercise.save();
+
+    const newExercise = {
+      username: saveExercise.username,
+      description: saveExercise.description,
+      duration: saveExercise.duration,
+      date: saveExercise.date,
+      _id: saveExercise.userId,
+    };
+
+    return res.status(200).json(newExercise);
+  } catch (e) {
+    if (e.name === "ValidationError") {
+      return res.status(400).json({ ERROR: e.message });
+    }
+    return res.status(500).json({ ERROR: "Server problem" });
+  }
 });
 
 app.get("/api/exercise/users", (req, res) => {
