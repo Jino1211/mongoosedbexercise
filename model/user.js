@@ -4,7 +4,7 @@ const url = process.env.MONGO_URI;
 
 mongoose
   .connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
-  .this(() => console.log("Success connect to mongoose"))
+  .then(() => console.log("Success connect to mongoose"))
   .catch((e) => console.log("ERROR connect to mongooseDB"));
 
 const userSchema = new mongoose.Schema({
