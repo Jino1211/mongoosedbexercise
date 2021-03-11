@@ -71,7 +71,12 @@ app.post("/api/exercise/add", async (req, res) => {
 });
 
 app.get("/api/exercise/users", (req, res) => {
-  res.status(200).json({ msg: "hello" });
+  User.find({})
+    .select("-__v")
+    .then((users) => {
+      res.status(200).json({ users });
+    })
+    .catch((e) => res.status(500).json({ msg: "ERROR" }));
 });
 
 app.get("/api/exercise/log", (req, res) => {
