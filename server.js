@@ -24,7 +24,7 @@ app.post("/api/exercise/new-user", async (req, res) => {
     const existUser = await User.find({ username: username });
 
     if (existUser.length !== 0) {
-      return res.status(400).status("User already exist");
+      return res.status(400).send("User already exist");
     }
 
     const newUser = new User({
