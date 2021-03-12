@@ -1,14 +1,16 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
-require("dotenv").config();
 const User = require("./model/user");
 const Exercise = require("./model/exercise");
+const bodyParser = require("body-parser");
 
 app.use(cors());
 app.use(express.static("public"));
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/views/index.html");
@@ -16,6 +18,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/exercise/new-user", async (req, res) => {
   const { username } = req.body;
+  console.log(req);
 
   try {
     const existUser = await User.find({ username: username });
@@ -37,9 +40,12 @@ app.post("/api/exercise/new-user", async (req, res) => {
 });
 
 app.post("/api/exercise/add", async (req, res) => {
+  console.log(req);
   const { userId, description, duration } = req.body;
-
+  console.log(req.body);
   const date = req.body.date === "" ? undefined : new Date(req.body.date);
+  console.log(userId);
+  console.log(description);
 
   try {
     const existUser = await User.findById(userId);
@@ -79,17 +85,24 @@ app.get("/api/exercise/users", (req, res) => {
     .catch((e) => res.status(500).json({ msg: "ERROR" }));
 });
 
-app.get("/api/exercise/log?:userId", async (req, res) => {
+app.get("/api/exercise/log?:userId?:from?:to?:limit", async (req, res) => {
   const id = req.query.userId;
+  const from = new Date(req.query.from);
+  const to = new Date(req.query.to);
+  const limit = Number(req.query.limit);
+
   try {
     const user = await User.findById(id);
 
     if (!user) return res.status(404).send("Unknown userId");
 
     const { _id, username } = user;
-    const log = await Exercise.find({ userId: _id }).select(
-      "-__v -_id -userId -username"
-    );
+    const log = await Exercise.find({
+      userId: _id,
+      date: { $gt: from, $lt: to },
+    })
+      .limit(limit)
+      .select("-__v -_id -userId -username");
 
     const newLog = [];
 
