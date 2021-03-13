@@ -12,7 +12,7 @@ const exerciseSchema = new mongoose.Schema({
   username: { type: String },
   description: { type: String, require: true },
   duration: { type: Number, require: true },
-  date: { type: Date, default: new Date() },
+  date: { type: Date, default: new Date().toDateString() },
 });
 
 exerciseSchema.set("toJSON", {

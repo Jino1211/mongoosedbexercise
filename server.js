@@ -18,7 +18,6 @@ app.get("/", (req, res) => {
 
 app.post("/api/exercise/new-user", async (req, res) => {
   const { username } = req.body;
-  console.log(req);
 
   try {
     const existUser = await User.find({ username: username });
@@ -40,12 +39,8 @@ app.post("/api/exercise/new-user", async (req, res) => {
 });
 
 app.post("/api/exercise/add", async (req, res) => {
-  console.log(req);
   const { userId, description, duration } = req.body;
-  console.log(req.body);
   const date = req.body.date === "" ? undefined : new Date(req.body.date);
-  console.log(userId);
-  console.log(description);
 
   try {
     const existUser = await User.findById(userId);
@@ -60,11 +55,11 @@ app.post("/api/exercise/add", async (req, res) => {
     const saveExercise = await exercise.save();
 
     const newExercise = {
-      username: saveExercise.username,
-      description: saveExercise.description,
-      duration: saveExercise.duration,
-      date: formatDate(saveExercise.date),
       _id: saveExercise.userId,
+      username: saveExercise.username,
+      date: saveExercise.date.toDateString(),
+      duration: saveExercise.duration,
+      description: saveExercise.description,
     };
 
     return res.status(200).json(newExercise);
@@ -80,13 +75,14 @@ app.get("/api/exercise/users", (req, res) => {
   User.find({})
     .select("-__v")
     .then((users) => {
-      res.status(200).json({ users });
+      res.status(200).json(users);
     })
     .catch((e) => res.status(500).json({ msg: "ERROR" }));
 });
 
 app.get("/api/exercise/log?:userId?:from?:to?:limit", async (req, res) => {
   const id = req.query.userId;
+  console.log(id);
   const from = new Date(req.query.from);
   const to = new Date(req.query.to);
   const limit = Number(req.query.limit);
@@ -99,10 +95,40 @@ app.get("/api/exercise/log?:userId?:from?:to?:limit", async (req, res) => {
     const { _id, username } = user;
     const log = await Exercise.find({
       userId: _id,
-      date: { $gt: from, $lt: to },
-    })
-      .limit(limit)
-      .select("-__v -_id -userId -username");
+    }).limit(limit);
+
+    let limitedExercise = [];
+
+    if (
+      from.toString() !== "Invalid Date" &&
+      to.toString() !== "Invalid Date"
+    ) {
+      log.forEach((exercise) => {
+        if (exercise.date > from && exercise.date < to) {
+          limitedExercise.push(exercise);
+        }
+      });
+    } else if (
+      from.toString() !== "Invalid Date" &&
+      to.toString() === "Invalid Date"
+    ) {
+      log.forEach((exercise) => {
+        if (exercise.date > from) {
+          limitedExercise.push(exercise);
+        }
+      });
+    } else if (
+      from.toString() === "Invalid Date" &&
+      to.toString() !== "Invalid Date"
+    ) {
+      log.forEach((exercise) => {
+        if (exercise.date < to) {
+          limitedExercise.push(exercise);
+        }
+      });
+    } else {
+      limitedExercise = log;
+    }
 
     const newLog = [];
 
@@ -110,7 +136,7 @@ app.get("/api/exercise/log?:userId?:from?:to?:limit", async (req, res) => {
       const updateExercise = {
         description,
         duration,
-        date: formatDate(date),
+        date: date.toDateString(),
       };
       newLog.push(updateExercise);
     });
@@ -130,18 +156,6 @@ app.get("/api/exercise/log?:userId?:from?:to?:limit", async (req, res) => {
     return res.status(500).json({ ERROR: "Server problem" });
   }
 });
-
-function formatDate(date) {
-  const year = date.getFullYear();
-  const day = date.getDate();
-  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(
-    date
-  );
-  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(
-    date
-  );
-  return `${weekday} ${month} ${day} ${year}`;
-}
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Your app is listening on port " + listener.address().port);
